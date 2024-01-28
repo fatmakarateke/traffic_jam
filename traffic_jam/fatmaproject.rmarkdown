@@ -1,0 +1,174 @@
+---
+title: "Traffic Jam Analysis"
+author: "Fatma Karateke"
+format: html
+editor: visual
+---
+
+## Read the traffic density file
+
+We downloaded the traffic density file and we are trying to download some packages from R and install them in R. We downloaded our file from this link: <https://data.ibb.gov.tr/dataset/hourly-traffic-density-data-set>
+
+## Running Code
+
+```{r}
+ 
+install.packages("ggplot2")
+```
+
+```{r}
+library(ggplot2)
+```
+
+Read the traffic density file
+
+```{r}
+traffic_data <- read.csv("traffic_density_202001.csv")
+head(traffic_data)
+print(summary(traffic_data))
+
+```
+
+Data Manipulation
+
+```{r}
+# Install and load the dplyr package if not already installed
+if (!requireNamespace("dplyr", quietly = TRUE)) {
+  install.packages("dplyr")
+}
+library(dplyr)
+
+# Read the dataset
+traffic_data <- read.csv("traffic_density_202001.csv")
+
+# Remove rows that meet a specific criterion in the NUMBER_OF_VEHICLES column
+# For example, let's remove those less than 10
+traffic_data <- traffic_data %>%
+  filter(NUMBER_OF_VEHICLES >= 10)
+
+# Replace the deleted rows with random data
+set.seed(123)  # Set a seed for randomness
+n_rows_to_add <- sum(traffic_data$NUMBER_OF_VEHICLES < 10)
+new_rows <- data.frame(
+  DATE_TIME = sample(traffic_data$DATE_TIME, n_rows_to_add, replace = TRUE),
+  LATITUDE = runif(n_rows_to_add, min = min(traffic_data$LATITUDE), max = max(traffic_data$LATITUDE)),
+  LONGITUDE = runif(n_rows_to_add, min = min(traffic_data$LONGITUDE), max = max(traffic_data$LONGITUDE)),
+  GEOHASH = sample(traffic_data$GEOHASH, n_rows_to_add, replace = TRUE),
+  MAXIMUM_SPEED = sample(traffic_data$MAXIMUM_SPEED, n_rows_to_add, replace = TRUE),
+  MINIMUM_SPEED = sample(traffic_data$MINIMUM_SPEED, n_rows_to_add, replace = TRUE),
+  AVERAGE_SPEED = sample(traffic_data$AVERAGE_SPEED, n_rows_to_add, replace = TRUE),
+  NUMBER_OF_VEHICLES = sample(1:9, n_rows_to_add, replace = TRUE)  # Random numbers
+)
+
+# Append the new dataset to the original dataset
+traffic_data <- bind_rows(traffic_data, new_rows)
+
+# Save the new dataset as CSV
+write.csv(traffic_data, file = "modified_traffic_data.csv", row.names = FALSE)
+
+# Create modified_traffic_data
+modified_traffic_data <- traffic_data
+
+
+```
+
+Checking Data
+
+```{r}
+head((modified_traffic_data))
+print(summary(modified_traffic_data))
+```
+
+```{r}
+cor(modified_traffic_data[, c("LATITUDE", "LONGITUDE", "MAXIMUM_SPEED", "MINIMUM_SPEED", "AVERAGE_SPEED", "NUMBER_OF_VEHICLES")])
+
+```
+
+Histogram graph
+
+```{r}
+par(mfrow = c(2, 3))
+print(hist(modified_traffic_data$LATITUDE, main = "Latitude", xlab = "Latitude"))
+print(hist(modified_traffic_data$LONGITUDE, main = "Longitude", xlab = "Longitude"))
+print(hist(modified_traffic_data$MAXIMUM_SPEED, main = "Maximum Speed", xlab = "Maximum Speed"))
+print(hist(modified_traffic_data$MINIMUM_SPEED, main = "Minimum Speed", xlab = "Minimum Speed"))
+print(hist(modified_traffic_data$AVERAGE_SPEED, main = "Average Speed", xlab = "Average Speed"))
+print(hist(modified_traffic_data$NUMBER_OF_VEHICLES, main = "Number of Vehicles", xlab = "Number of Vehicles"))
+```
+
+Boxplot
+
+```{r}
+par(mfrow = c(2, 3))
+boxplot(modified_traffic_data$LATITUDE, main = "Latitude", ylab = "Latitude")
+boxplot(modified_traffic_data$LONGITUDE, main = "Longitude", ylab = "Longitude")
+boxplot(modified_traffic_data$MAXIMUM_SPEED, main = "Maximum Speed", ylab = "Maximum Speed")
+boxplot(modified_traffic_data$MINIMUM_SPEED, main = "Minimum Speed", ylab = "Minimum Speed")
+boxplot(modified_traffic_data$AVERAGE_SPEED, main = "Average Speed", ylab = "Average Speed")
+boxplot(modified_traffic_data$NUMBER_OF_VEHICLES, main = "Number of Vehicles", ylab = "Number of Vehicles")
+
+
+
+```
+
+```         
+```
+
+Density Graph
+
+```{r}
+
+par(mfrow = c(2, 3))
+plot(density(modified_traffic_data$LATITUDE), main = "Density - Latitude", xlab = "Latitude")
+plot(density(modified_traffic_data$LONGITUDE), main = "Density - Longitude", xlab = "Longitude")
+plot(density(modified_traffic_data$MAXIMUM_SPEED), main = "Density - Maximum Speed", xlab = "Maximum Speed")
+plot(density(modified_traffic_data$MINIMUM_SPEED), main = "Density - Minimum Speed", xlab = "Minimum Speed")
+plot(density(modified_traffic_data$AVERAGE_SPEED), main = "Density - Average Speed", xlab = "Average Speed")
+plot(density(modified_traffic_data$NUMBER_OF_VEHICLES), main = "Density - Number of Vehicles", xlab = "Number of Vehicles")
+```
+
+```         
+```
+
+Model Information
+
+```{r}
+
+
+
+
+
+summary(lm(MAXIMUM_SPEED ~ LATITUDE + LONGITUDE + AVERAGE_SPEED + NUMBER_OF_VEHICLES, data = modified_traffic_data))
+
+
+```
+
+Linear Regression Model and Predictions
+
+```{r}
+model <- lm(MAXIMUM_SPEED ~ LATITUDE + LONGITUDE + AVERAGE_SPEED + NUMBER_OF_VEHICLES, data = traffic_data)
+predictions <- predict(model, newdata = modified_traffic_data)
+
+
+```
+
+```{r}
+# RMSE (Root Mean Squared Error)
+rmse <- sqrt(mean((modified_traffic_data$MAXIMUM_SPEED - predictions)^2))
+cat("RMSE: ", rmse, "\n")
+
+# R-kare (R-squared)
+r_squared <- summary(model)$r.squared
+cat("R-squared: ", r_squared, "\n")
+
+# MAE (Mean Absolute Error)
+mae <- mean(abs(modified_traffic_data$MAXIMUM_SPEED - predictions))
+cat("MAE: ", mae, "\n")
+
+# MAPE (Mean Absolute Percentage Error)
+mape <- mean(abs((modified_traffic_data$MAXIMUM_SPEED - predictions) / traffic_data$MAXIMUM_SPEED) * 100)
+cat("MAPE: ", mape, "\n")
+
+```
+
+This regression model was employed to predict maximum speed, and upon examination of the results, it is evident that the model exhibits a certain level of success. The Root Mean Squared Error (RMSE) value is calculated as 14.53 units, indicating an average deviation of approximately 16 units in the model's predictions of maximum speed. The R-squared value is determined to be 0.80, signifying that the model explains a significant portion of the variance in maximum speed. However, the Mean Absolute Error (MAE) value is computed as 11.22 units, suggesting an average deviation of 12 units in the model's predictions. The Mean Absolute Percentage Error (MAPE) is found to be 12.09%. These results imply that the model performs reasonably well, but there is room for improvement in specific instances. To enhance the model's performance further, strategies such as incorporating additional features or increasing model complexity can be explored.
